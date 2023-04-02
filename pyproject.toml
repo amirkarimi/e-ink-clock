@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "clock"
+version = "0.1.0"
+description = "Pi e-ink clock"
+authors = ["Amir Karimi"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+inky = "^1.5.0"
+pillow = "^9.5.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

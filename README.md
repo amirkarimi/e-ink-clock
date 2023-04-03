@@ -26,7 +26,7 @@ To load weather information you need to:
 Then deploy the script on your Raspberry Pi:
 
 1. Install Inky's: `curl https://get.pimoroni.com/inky | bash`.
-2. Install dependencies: `pip install typer`.
+2. Install dependencies: `sudo pip install typer` (sudo is important because we use the root crontab to schedule the script).
 3. Copy [clock.py](clock.py) and [fonts](./fonts) folder (or only the used font in the script) to your Pi.
 4. Setup cron to run it every minute:
     - `sudo crontab -e`

@@ -48,15 +48,15 @@ def build_img(inky_display, cur_temp: str):
 
     now = datetime.now()
     time = now.strftime('%H:%M')
-    date = now.strftime(f'{now.day}/{now.month}')
+    date = now.strftime(f'{now.month}/{now.day}')
 
     font_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "fonts/ChessType.ttf")
 
     draw_text(60, time, ImageFont.truetype(font_path, 125))
     draw_text(230, date, ImageFont.truetype(font_path, 70), align='right', margin=5)
     
-    neg = '–' if cur_temp < 0 else '' # Have to use a different dash as regular `-` is not supported by the font
-    draw_text(230, f'{neg}{abs(round(cur_temp))}°', ImageFont.truetype(font_path, 70), align='left', margin=5)
+    cur_temp = str(round(cur_temp)).replace('-', '–') # Have to use a different dash as regular `-` is not supported by the font
+    draw_text(230, f'{cur_temp}°', ImageFont.truetype(font_path, 70), align='left', margin=5)
     return img
 
 def main(weather_api_key: str, lat: float, lon: float, debug: bool = False):

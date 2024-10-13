@@ -5,17 +5,34 @@ import os
 import typer
 import json
 import urllib.request
+import psutil
 from datetime import datetime
 from inky.what import InkyWHAT
 
 from PIL import Image, ImageFont, ImageDraw
 
 
+def kill_existing_instances():
+    # Get current process ID and name
+    current_pid = os.getpid()
+    current_cmdline = psutil.Process(current_pid).cmdline()
+
+    # Iterate through all running processes
+    for proc in psutil.process_iter(["pid", "name"]):
+        try:
+            # Check if the process has the same name but a different PID
+            if proc.cmdline() == current_cmdline and proc.info["pid"] != current_pid:
+                print(f"Killing existing instance: PID {proc.info['pid']}")
+                proc.kill()
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+            pass
+
+
 def cur_temp(api_key: str, lat: float, lon: float):
-    url = f'https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={api_key}'
+    url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={api_key}"
     response = urllib.request.urlopen(url)
-    result = json.loads(response.read().decode('utf-8'))
-    return result["main"]["temp"] - 273.15 # Kelvin to Celsius
+    result = json.loads(response.read().decode("utf-8"))
+    return result["main"]["temp"] - 273.15  # Kelvin to Celsius
 
 
 def build_img(inky_display, cur_temp: str):
@@ -25,56 +42,65 @@ def build_img(inky_display, cur_temp: str):
     # Create a new canvas to draw on
     img = Image.new("P", (WIDTH, HEIGHT))
     draw = ImageDraw.Draw(img)
-    draw.rectangle(
-        [
-            0,
-            0,
-            WIDTH,
-            HEIGHT
-        ], fill=inky_display.WHITE)
+    draw.rectangle([0, 0, WIDTH, HEIGHT], fill=inky_display.WHITE)
 
-    def draw_text(height, text, font, align='center', margin=10, color=inky_display.BLACK):
+    def draw_text(
+        height, text, font, align="center", margin=10, color=inky_display.BLACK
+    ):
         x, y, w, h = font.getbbox(text)
         w += x
         h += y
-        if align == 'center':
-            width = WIDTH//2 - w//2
-        elif align == 'right':
+        if align == "center":
+            width = WIDTH // 2 - w // 2
+        elif align == "right":
             width = WIDTH - w - margin
-        elif align == 'left':
+        elif align == "left":
             width = margin
+        else:
+            raise ValueError(f"Invalid align value: {align}")
         draw.text((width, height), text, fill=color, font=font)
         return (width, height, w, h)
 
     now = datetime.now()
-    time = now.strftime('%H:%M')
-    date = now.strftime(f'{now.month}/{now.day}')
+    time = now.strftime("%H:%M")
+    date = now.strftime(f"{now.month}/{now.day}")
 
-    font_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "fonts/ChessType.ttf")
+    font_path = os.path.join(
+        os.path.dirname(os.path.realpath(__file__)), "fonts/ChessType.ttf"
+    )
 
     draw_text(60, time, ImageFont.truetype(font_path, 125))
-    draw_text(230, date, ImageFont.truetype(font_path, 70), align='right', margin=5)
-    
-    cur_temp = str(round(cur_temp)).replace('-', '–') # Have to use a different dash as regular `-` is not supported by the font
-    draw_text(230, f'{cur_temp}°', ImageFont.truetype(font_path, 70), align='left', margin=5)
+    draw_text(230, date, ImageFont.truetype(font_path, 70), align="right", margin=5)
+
+    cur_temp = str(round(cur_temp)).replace(
+        "-", "–"
+    )  # Have to use a different dash as regular `-` is not supported by the font
+    draw_text(
+        230, f"{cur_temp}°", ImageFont.truetype(font_path, 70), align="left", margin=5
+    )
     return img
+
 
 def main(weather_api_key: str, lat: float, lon: float, debug: bool = False):
     if debug:
+
         class MockInky:
-            WHITE='white'
-            BLACK='black'
-            RED='red'
-            width=400
-            height=300
+            WHITE = "white"
+            BLACK = "black"
+            RED = "red"
+            width = 400
+            height = 300
+
         inky_display = MockInky()
     else:
-        inky_display = InkyWHAT(colour = 'black') # Using `black` only to speed up the display refresh rate
+        inky_display = InkyWHAT(
+            colour="black"
+        )  # Using `black` only to speed up the display refresh rate
         inky_display.set_border(inky_display.WHITE)
 
     temp = cur_temp(weather_api_key, lat, lon)
     img = build_img(inky_display, temp)
-    
+
     if debug:
         img = img.convert("RGB")
         img.show()
@@ -83,6 +109,7 @@ def main(weather_api_key: str, lat: float, lon: float, debug: bool = False):
         inky_display.set_image(img)
         inky_display.show()
 
-if __name__ == "__main__":
-    typer.run(main)
 
+if __name__ == "__main__":
+    kill_existing_instances()
+    typer.run(main)
